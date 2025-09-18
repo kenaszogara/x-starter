@@ -1,0 +1,171 @@
+import path from "path";
+import fs from "fs-extra";
+import ora from "ora";
+import { execa } from "execa";
+import { fileURLToPath } from "url";
+import { ProjectOptions } from "./prompts.js";
+import { copyTemplate, processTemplateFiles } from "./template-utils.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export async function createProject(
+  projectName: string,
+  options: ProjectOptions
+): Promise<void> {
+  const projectPath = path.join(process.cwd(), projectName);
+
+  // Create project directory
+  let spinner = ora("Creating project directory...").start();
+  await fs.ensureDir(projectPath);
+  spinner.succeed("Project directory created");
+
+  // Copy base template
+  spinner = ora("Setting up project files...").start();
+  const templateName =
+    options.framework === "nextjs" ? "nextjs-base" : "vite-base";
+  const templatePath = path.join(__dirname, "..", "templates", templateName);
+
+  await copyTemplate(templatePath, projectPath);
+
+  // Process template variables
+  await processTemplateFiles(projectPath, {
+    projectName,
+    ...options,
+  });
+
+  spinner.succeed("Project files set up");
+
+  // Install base dependencies first
+  spinner = ora("Installing dependencies...").start();
+  const packageManager = "pnpm";
+
+  try {
+    await execa(packageManager, ["install"], {
+      cwd: projectPath,
+      stdio: "pipe",
+    });
+    spinner.succeed("Dependencies installed");
+  } catch (error) {
+    spinner.fail("Failed to install dependencies");
+    throw new Error(`Failed to install dependencies: ${error}`);
+  }
+
+  // Start setting up addons if any:
+
+  // Setup Tanstack Query
+  if (options.addons.includes("tanstack-query")) {
+    await setupTanstackQuery({
+      projectPath,
+      packageManager,
+      framework: options.framework,
+    });
+  }
+
+  // End of addons setup
+
+  //Last step: Initialize Git repository
+  spinner = ora("Initializing Git repository...").start();
+  try {
+    await execa("git", ["init"], { cwd: projectPath, stdio: "pipe" });
+    spinner.succeed("Git repository initialized");
+  } catch (error) {
+    spinner.fail("Git initialization failed (git may not be installed)");
+  }
+}
+
+async function setupTanstackQuery({
+  projectPath,
+  packageManager,
+  framework,
+}: {
+  projectPath: string;
+  packageManager: string;
+  framework: string;
+}) {
+  const spinner = ora("Setting up Tanstack Query...").start();
+
+  // install dev dependencies
+  await execa(
+    packageManager,
+    ["add", "@tanstack/react-query", "@tanstack/react-query-devtools"],
+    {
+      cwd: projectPath,
+      stdio: "pipe",
+    }
+  );
+
+  // read from stub/query-provider.txt to file _projDir/src/components/providers/query-provider.tsx
+  const queryProvider = fs.readFileSync(
+    path.join(__dirname, "..", "src", "stubs", "query-provider.txt"),
+    "utf-8"
+  );
+
+  // create directory if it doesn't exist
+  await fs.ensureDir(path.join(projectPath, "src/components/providers"));
+  await fs.writeFile(
+    path.join(projectPath, "src/components/providers/query-provider.tsx"),
+    queryProvider
+  );
+
+  // if framework is nextjs, add <QueryProvider> to src/app/layout.tsx
+  if (framework === "nextjs") {
+    let layout = "";
+    layout = fs.readFileSync(
+      path.join(projectPath, "src/app/layout.tsx"),
+      "utf-8"
+    );
+
+    // add import statement for QueryProvider after the "import "./globals.css";" line
+    const globalsCssRegex = /import \"\.\/globals\.css\";/;
+    const matchGlobalsCss = layout.match(globalsCssRegex);
+    if (matchGlobalsCss) {
+      const content = matchGlobalsCss[0];
+      const newMainContent = `${content}\nimport { QueryProvider } from '@/components/providers/query-provider'\n`;
+      layout = layout.replace(globalsCssRegex, newMainContent);
+    }
+
+    // modify the app/layout.tsx and insert <QueryProvider> after the body tag
+    const bodyRegex = /<body[^>]*>([\s\S]*?)<\/body>/;
+    const match = layout.match(bodyRegex);
+    if (match) {
+      const bodyContent = match[1];
+      const bodyAttributes = layout.match(/<body([^>]*)>/)?.[1] || "";
+      const newBodyContent = `<QueryProvider>${bodyContent}</QueryProvider>`;
+      layout = layout.replace(
+        bodyRegex,
+        `<body${bodyAttributes}>${newBodyContent}</body>`
+      );
+    }
+    await fs.writeFile(path.join(projectPath, "src/app/layout.tsx"), layout);
+  }
+
+  // if framework is vite, add <QueryProvider> to src/routes/__root.tsx
+  if (framework === "vite") {
+    let root = "";
+    root = fs.readFileSync(
+      path.join(projectPath, "src/routes/__root.tsx"),
+      "utf-8"
+    );
+
+    // add import statement for QueryProvider after the first line of the file
+    root =
+      "import { QueryProvider } from '@/components/providers/query-provider'\n" +
+      root;
+
+    // modify the root element and insert <QueryProvider>
+    const rootElementRegex = /<[^>]*>([\s\S]*?)<\/>/;
+    const match = root.match(rootElementRegex);
+    if (match) {
+      const content = match[1];
+      const newMainContent = `<QueryProvider>${content}</QueryProvider>`;
+      root = root.replace(rootElementRegex, `<>${newMainContent}</>`);
+    }
+    await fs.writeFile(path.join(projectPath, "src/routes/__root.tsx"), root);
+  }
+
+  spinner.succeed(`Installed tanstack query dependencies:
+    - @tanstack/react-query
+    - @tanstack/react-query-devtools
+    `);
+}
