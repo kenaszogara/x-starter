@@ -97,7 +97,7 @@ async function setupTanstackQuery({
 
   // read from stub/query-provider.txt to file _projDir/src/components/providers/query-provider.tsx
   const queryProvider = fs.readFileSync(
-    path.join(__dirname, "..", "src", "stubs", "query-provider.txt"),
+    path.join(__dirname, "..", "stubs", "query-provider.txt"),
     "utf-8"
   );
 
