@@ -51,7 +51,7 @@ export async function createProject(
     throw new Error(`Failed to install dependencies: ${error}`);
   }
 
-  // Start setting up addons if any:
+  // ADDONS SETUP START:
 
   // Setup Tanstack Query
   if (options.addons.includes("tanstack-query")) {
@@ -62,9 +62,9 @@ export async function createProject(
     });
   }
 
-  // End of addons setup
+  // ADDONS SETUP EN
 
-  //Last step: Initialize Git repository
+  // git init step
   spinner = ora("Initializing Git repository...").start();
   try {
     await execa("git", ["init"], { cwd: projectPath, stdio: "pipe" });
@@ -72,8 +72,23 @@ export async function createProject(
   } catch (error) {
     spinner.fail("Git initialization failed (git may not be installed)");
   }
+
+  // format all files with prettier
+  spinner = ora("Formatting files with prettier...").start();
+  try {
+    await execa("prettier", ["--write", "."], {
+      cwd: projectPath,
+      stdio: "pipe",
+    });
+    spinner.succeed("Files formatted with prettier");
+  } catch (error) {
+    spinner.fail("Failed to format files with prettier");
+  }
 }
 
+/**
+ *  Setup Tanstack Query
+ */
 async function setupTanstackQuery({
   projectPath,
   packageManager,
@@ -169,3 +184,16 @@ async function setupTanstackQuery({
     - @tanstack/react-query-devtools
     `);
 }
+
+/**
+ * Setup zustand store
+ */
+async function setupZustandStore({
+  projectPath,
+  packageManager,
+  framework,
+}: {
+  projectPath: string;
+  packageManager: string;
+  framework: string;
+}) {}

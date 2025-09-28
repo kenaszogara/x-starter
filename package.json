@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "node dist/index.js test-project"
   },
   "keywords": [
     "cli",
