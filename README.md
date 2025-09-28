@@ -1,17 +1,19 @@
 # X-Starter
 
-A CLI tool to quickly scaffold React projects with Next.js or Vite, including Tailwind CSS and shadcn/ui.
+CLI tool to quickly scaffold React projects for your next "X" project, with opiniated addons
 
 ## Features
 
 - 🚀 **Two Framework Options**: Choose between Next.js or Vite
-- 🎨 **Tailwind CSS Integration**: Optional Tailwind CSS setup with PostCSS
-- 🧩 **shadcn/ui Support**: Optional shadcn/ui component library setup
-- 📦 **Package Manager Choice**: Support for pnpm and npm
+- 🎨 **shadcn/ui + Tailwind CSS Out of the Box**
+- 📦 **PNPM as Package Manager**
 - 🔧 **TypeScript Ready**: Full TypeScript configuration included
 - 🎯 **ESLint & Prettier**: Code quality tools pre-configured
-- 📁 **Modern Project Structure**: Best practices folder organization
-- 🔀 **Git Integration**: Optional git repository initialization
+- 📁 **Opiniated Project Structure**: (src/)
+- 🧩 **Pick and Choose Add-Ons**:
+  - ⭐ **@tanstack/react-query**
+  - ⭐ **zustand**
+  - ⭐ **better-auth** (coming soon)
 
 ## Installation
 
@@ -27,50 +29,15 @@ npx x-starter my-awesome-app
 
 ```bash
 npx x-starter
+
+npx x-starter my-project
 ```
 
 The CLI will prompt you to:
 
-1. Enter project name
+1. Enter project name (if not specified)
 2. Choose framework (Next.js or Vite)
-3. Include Tailwind CSS
-4. Include shadcn/ui components
-5. Choose package manager (pnpm or npm)
-6. Initialize git repository
-
-### Command Line Options
-
-```bash
-npx x-starter my-project --framework nextjs --no-git
-```
-
-Available options:
-
-- `--framework <nextjs|vite>` - Choose the framework
-- `--no-tailwind` - Skip Tailwind CSS setup
-- `--no-shadcn` - Skip shadcn/ui setup
-- `--no-pnpm` - Use npm instead of pnpm
-- `--no-git` - Skip git initialization
-
-## Examples
-
-### Next.js with Tailwind and shadcn/ui
-
-```bash
-npx x-starter my-nextjs-app --framework nextjs
-```
-
-### Vite with Tailwind but no shadcn/ui
-
-```bash
-npx x-starter my-vite-app --framework vite --no-shadcn
-```
-
-### Minimal Vite setup
-
-```bash
-npx x-starter my-minimal-app --framework vite --no-tailwind --no-git
-```
+3. Pick and choose addons
 
 ## Project Structure
 
@@ -79,13 +46,12 @@ npx x-starter my-minimal-app --framework vite --no-tailwind --no-git
 ```
 my-nextjs-app/
 ├── src/
-│   └── app/
-│       ├── globals.css
-│       ├── layout.tsx
-│       └── page.tsx
+│   ├── app/
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   └── [/addons]
 ├── next.config.js
-├── tailwind.config.js (if Tailwind enabled)
-├── postcss.config.js (if Tailwind enabled)
 ├── tsconfig.json
 ├── package.json
 └── README.md
@@ -99,16 +65,25 @@ my-vite-app/
 │   ├── App.tsx
 │   ├── App.css
 │   ├── main.tsx
-│   └── index.css
+│   ├── index.css
+│   └── [/addons]
 ├── index.html
 ├── vite.config.ts
-├── tailwind.config.js (if Tailwind enabled)
-├── postcss.config.js (if Tailwind enabled)
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── package.json
 └── README.md
 ```
+
+## Roadmap V0:
+
+- [x] @tanstack/react-query (vanila)
+- [x] zustand: with provider + slice patterns
+- [ ] better-auth: framework agnostic login
+- [ ] react-hook-form: with zod as validator
+- [ ] @tanstack/table or ag-grid: pick and choose a table framework
+- [ ] @hey-api/openapi-ts (vanila): with axios client and minimal setup
+- [ ] @hey-api/openapi-ts + @tanstack/react-query: with react-query codegen
 
 ## Development
 
@@ -116,29 +91,28 @@ To develop and test this CLI tool:
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone <repo-url>
 cd x-starter
 
 # Install dependencies
-npm install
+pnpm install
 
 # Build the project
-npm run build
+pnpm run build
 
-# Test locally
-node dist/index.js test-project --framework nextjs
+# test locally
+pnpm run test
 ```
 
 ## Scripts
 
-- `npm run build` - Build the TypeScript project
-- `npm run dev` - Watch mode for development
-- `npm run prepublishOnly` - Build before publishing
+- `pnpm run build` - Build the TypeScript project
+- `pnpm run dev` - Watch mode for development
 
 ## Requirements
 
 - Node.js >= 16.0.0
-- npm, pnpm, or yarn
+- pnpm
 
 ## License
 
