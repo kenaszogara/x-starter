@@ -52,10 +52,19 @@ export async function createProject(
   }
 
   // ADDONS SETUP START:
+  // PRIORITY: ZUSTAND > TANSTACK QUERY
 
   // Setup Tanstack Query
   if (options.addons.includes("tanstack-query")) {
     await setupTanstackQuery({
+      projectPath,
+      packageManager,
+      framework: options.framework,
+    });
+  }
+
+  if (options.addons.includes("zustand")) {
+    await setupZustandStore({
       projectPath,
       packageManager,
       framework: options.framework,
@@ -110,17 +119,11 @@ async function setupTanstackQuery({
     }
   );
 
-  // read from stub/query-provider.txt to file _projDir/src/components/providers/query-provider.tsx
-  const queryProvider = fs.readFileSync(
-    path.join(__dirname, "..", "stubs", "query-provider.txt"),
-    "utf-8"
-  );
-
   // create directory if it doesn't exist
   await fs.ensureDir(path.join(projectPath, "src/components/providers"));
-  await fs.writeFile(
-    path.join(projectPath, "src/components/providers/query-provider.tsx"),
-    queryProvider
+  await fs.copy(
+    path.join(__dirname, "..", "stubs", "query-provider.tsx"),
+    path.join(projectPath, "src/components/providers/query-provider.tsx")
   );
 
   // if framework is nextjs, add <QueryProvider> to src/app/layout.tsx
@@ -132,11 +135,11 @@ async function setupTanstackQuery({
     );
 
     // add import statement for QueryProvider after the "import "./globals.css";" line
-    const globalsCssRegex = /import \"\.\/globals\.css\";/;
+    const globalsCssRegex = /import ['"]\.\/globals\.css['"];/;
     const matchGlobalsCss = layout.match(globalsCssRegex);
     if (matchGlobalsCss) {
       const content = matchGlobalsCss[0];
-      const newMainContent = `${content}\nimport { QueryProvider } from '@/components/providers/query-provider'\n`;
+      const newMainContent = `${content}\nimport { QueryProvider } from '@/components/providers/query-provider';`;
       layout = layout.replace(globalsCssRegex, newMainContent);
     }
 
@@ -179,7 +182,7 @@ async function setupTanstackQuery({
     await fs.writeFile(path.join(projectPath, "src/routes/__root.tsx"), root);
   }
 
-  spinner.succeed(`Installed tanstack query dependencies:
+  spinner.succeed(`Tanstack query setup with dependencies:
     - @tanstack/react-query
     - @tanstack/react-query-devtools
     `);
@@ -196,4 +199,78 @@ async function setupZustandStore({
   projectPath: string;
   packageManager: string;
   framework: string;
-}) {}
+}) {
+  const spinner = ora("Setting up Zustand store...").start();
+
+  // Step 1: install zustand & immer
+  await execa(packageManager, ["add", "zustand", "immer"], {
+    cwd: projectPath,
+    stdio: "pipe",
+  });
+
+  // Step 2: copy stub files to project
+  await fs.ensureDir(path.join(projectPath, "src/store"));
+  await copyTemplate(
+    path.join(__dirname, "..", "stubs", "store"),
+    path.join(projectPath, "src/store")
+  );
+
+  // Step 3: inject provider to layout/root
+  if (framework === "nextjs") {
+    let layout = "";
+    layout = fs.readFileSync(
+      path.join(projectPath, "src/app/layout.tsx"),
+      "utf-8"
+    );
+
+    // add import statement for RootStoreProvider after the "import "./globals.css";" line
+    const globalsCssRegex = /import ['"]\.\/globals\.css['"];/;
+    const matchGlobalsCss = layout.match(globalsCssRegex);
+    if (matchGlobalsCss) {
+      const content = matchGlobalsCss[0];
+      const newMainContent = `${content}\nimport { RootStoreProvider } from '@/store/store-provider';`;
+      layout = layout.replace(globalsCssRegex, newMainContent);
+    }
+
+    // modify the app/layout.tsx and insert <RootStoreProvider> after the body tag
+    const bodyRegex = /<body[^>]*>([\s\S]*?)<\/body>/;
+    const match = layout.match(bodyRegex);
+    if (match) {
+      const bodyContent = match[1];
+      const bodyAttributes = layout.match(/<body([^>]*)>/)?.[1] || "";
+      const newBodyContent = `<RootStoreProvider>${bodyContent}</RootStoreProvider>`;
+      layout = layout.replace(
+        bodyRegex,
+        `<body${bodyAttributes}>${newBodyContent}</body>`
+      );
+    }
+    await fs.writeFile(path.join(projectPath, "src/app/layout.tsx"), layout);
+  }
+
+  if (framework === "vite") {
+    let root = "";
+    root = fs.readFileSync(
+      path.join(projectPath, "src/routes/__root.tsx"),
+      "utf-8"
+    );
+
+    // add import statement for RootStoreProvider after the first line of the file
+    root =
+      "import { RootStoreProvider } from '@/store/store-provider';\n" + root;
+
+    // modify the root element and insert <RootStoreProvider>
+    const rootElementRegex = /<[^>]*>([\s\S]*?)<\/>/;
+    const match = root.match(rootElementRegex);
+    if (match) {
+      const content = match[1];
+      const newMainContent = `<RootStoreProvider>${content}</RootStoreProvider>`;
+      root = root.replace(rootElementRegex, `<>${newMainContent}</>`);
+    }
+    await fs.writeFile(path.join(projectPath, "src/routes/__root.tsx"), root);
+  }
+
+  spinner.succeed(`Zustand store setup with dependencies:
+    - zustand
+    - immer
+    `);
+}
