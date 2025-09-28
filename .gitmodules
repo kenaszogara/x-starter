@@ -1,6 +1,9 @@
 [submodule "templates/nextjs-base"]
 	path = templates/nextjs-base
 	url = https://github.com/kenaszogara/nextjs-base.git
+	branch = main
+
 [submodule "templates/vite-base"]
 	path = templates/vite-base
 	url = https://github.com/kenaszogara/vite-base.git
+	branch = main
